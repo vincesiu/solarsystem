@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+attribute vec4 vNormal;
+
+varying vec4 fColor;
+varying vec3 N1, L1, E1;
+uniform float curPlanet;
+
+
+
+
+uniform vec4 ambientProduct, diffuseProduct, specularProduct;
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+uniform vec4 lightPosition;
+uniform float shininess;
+
+varying float D1;
+
+void main()
+{
+    //Initializing these variables
+    ////////////////////
+    ////////////////////
+    
+    fColor = vec4(0.0, 0.0, 0.0, 0.0);
+    L1 = vec3(0.0, 0.0, 0.0);
+    E1 = vec3(0.0, 0.0, 0.0);
+    N1 = vec3(0.0, 0.0, 0.0);
+    
+
+    gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+    
+
+    vec3 pos = (modelViewMatrix * vPosition).xyz;
+    float d = pow(lightPosition.x - pos.x, 2.0) + pow(lightPosition.y - pos.y, 2.0) + pow(lightPosition.z - pos.z, 2.0);
+    D1 = d;
+
+    if (curPlanet == 1.0) {
+        //Sun shading 
+        //////////////////////
+        //////////////////////
+        fColor = vec4(1.0, 1.0, 0.0, 1.0);
+    }
+    else if (curPlanet == 4.0) {
+        //Phong shading
+        //////////////////////
+        //////////////////////
+        L1 = normalize( lightPosition.xyz - pos );
+        E1 =  -normalize(pos);
+        N1 = normalize(modelViewMatrix * vNormal).xyz;
+    }
+    else {
+        //Gouraud shading 
+        //////////////////////
+        //////////////////////
+        vec3 L = normalize( lightPosition.xyz - pos );
+        vec3 E = -normalize( pos );
+        vec3 H = normalize( L + E );
+        vec3 N = normalize( modelViewMatrix * vNormal).xyz;
+        float Kd = max( dot(L, N), 0.0 );
+        vec4  diffuse = Kd * diffuseProduct;
+
+        float Ks = pow( max(dot(N, H), 0.0), shininess );
+        vec4  specular = Ks * specularProduct;
+        
+        if( dot(L, N) < 0.0 ) 
+            specular = vec4(0.0, 0.0, 0.0, 1.0);
+        
+        vec4 ambient = ambientProduct;
+
+        fColor = (ambient + diffuse + specular) / (0.01 * d);
+        fColor.a = 1.0;
+    }
+
+}
+</script>
+
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+precision highp float;
+
+varying vec4 fColor;
+varying float D1;
+
+uniform float curPlanet;
+uniform float shininess;
+uniform vec4 ambientProduct, diffuseProduct, specularProduct;
+varying vec3 N1, L1, E1;
+
+
+void main()
+{
+
+
+    if (curPlanet == 4.0) {
+        //Gouraud shading 
+        //////////////////////
+        //////////////////////
+        vec4 fColor;
+        vec3 H = normalize( L1 + E1 );
+        vec4 ambient = ambientProduct;
+
+        float Kd = max( dot(L1, N1), 0.0 );
+        vec4  diffuse = Kd * diffuseProduct;
+
+        float Ks = pow( max(dot(N1, H), 0.0), shininess );
+        vec4  specular = Ks * specularProduct;
+        
+        if( dot(L1, N1) < 0.0 ) 
+            specular = vec4(0.0, 0.0, 0.0, 1.0);
+
+        fColor = (ambient + diffuse + specular) / (0.01 * D1);
+        fColor.a = 1.0;
+
+        gl_FragColor = fColor;
+    } else {
+        //Phong shading or its the sun
+        //////////////////////
+        //////////////////////
+        gl_FragColor = fColor;
+    }
+}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="initShaders.js"></script>
+
+<script type="text/javascript" src="MV.js"></script>
+<script type="text/javascript" src="solarsystem.js"></script>
+
+<body>
+<canvas id="gl-canvas" width="960" height="540">
+    Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+</body>
+</html>
